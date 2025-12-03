@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Basketball Realistic 1v1</title>
+<style>
+    body {
+        margin: 0;
+        background: #1d1d1d;
+        font-family: Arial;
+    }
+    canvas {
+        display: block;
+        margin: auto;
+        background: #2b2b2b;
+    }
+    #info {
+        color: white;
+        text-align: center;
+        margin-top: 10px;
+        font-size: 20px;
+    }
+</style>
+</head>
+<body>
+
+<canvas id="game" width="480" height="720"></canvas>
+<div id="info">🔼 Swipe ke atas untuk menembak — ⬅️➡️ untuk bergerak</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let player = { x: 240, y: 600, w: 40, h: 60, speed: 5, hasBall: true };
+let enemy = { x: 240, y: 350, w: 40, h: 60, speed: 3 };
+let ball = { x: player.x, y: player.y - 20, vx: 0, vy: 0, inAir: false };
+
+let scorePlayer = 0;
+let scoreEnemy = 0;
+
+let shotPower = 0;
+let charging = false;
+
+// INPUT
+let keys = {};
+document.addEventListener("keydown", (e) => keys[e.key] = true);
+document.addEventListener("keyup", (e) => keys[e.key] = false);
+
+// Touch (shoot)
+let touchStartY = 0;
+canvas.addEventListener("touchstart", (e) => {
+    touchStartY = e.touches[0].clientY;
+    charging = true;
+});
+canvas.addEventListener("touchend", (e) => {
+    charging = false;
+    shootBall();
+});
+
+// PC shoot (space)
+document.addEventListener("keyup", (e) => {
+    if (e.key === " ") shootBall();
+});
+
+// Gerakan musuh (AI sederhana)
+function updateEnemy() {
+    if (enemy.x < player.x) enemy.x += enemy.speed;
+    if (enemy.x > player.x) enemy.x -= enemy.speed;
+}
+
+// Gerakan pemain
+function updatePlayer() {
+    if (keys["ArrowLeft"]) player.x -= player.speed;
+    if (keys["ArrowRight"]) player.x += player.speed;
+    player.x = Math.max(20, Math.min(canvas.width - 20, player.x));
+}
+
+// Power bar
+function updatePower() {
+    if (charging) {
+        shotPower += 0.4;
+        if (shotPower > 22) shotPower = 22;
+    }
+}
+
+// Animasi bola
+function updateBall() {
+    if (!ball.inAir) {
+        ball.x = player.x;
+        ball.y = player.y - 25;
+    } else {
+        ball.vy += 0.3;
+        ball.x += ball.vx;
+        ball.y += ball.vy;
+
+        // Check masuk ring (zona atas)
+        if (ball.y < 120 && ball.x > 180 && ball.x < 300) {
+            scorePlayer++;
+            resetBall();
+        }
+
+        // Bola jatuh keluar lapangan
+        if (ball.y > 750) resetBall();
+    }
+}
+
+// Tembakan
+function shootBall() {
+    if (ball.inAir) return;
+
+    ball.inAir = true;
+    ball.vx = (Math.random() - 0.5) * 2;
+    ball.vy = -shotPower;
+    shotPower = 0;
+}
+
+// Reset posisi bola
+function resetBall() {
+    ball.inAir = false;
+    ball.vx = 0;
+    ball.vy = 0;
+}
+
+// Gambar karakter
+function drawCharacter(obj, color) {
+    ctx.fillStyle = color;
+    ctx.fillRect(obj.x - obj.w/2, obj.y - obj.h/2, obj.w, obj.h);
+
+    // Kepala
+    ctx.beginPath();
+    ctx.arc(obj.x, obj.y - obj.h/2 - 10, 15, 0, Math.PI*2);
+    ctx.fillStyle = "#ffe39f";
+    ctx.fill();
+}
+
+// Gambar bola
+function drawBall() {
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, 10, 0, Math.PI*2);
+    ctx.fillStyle = "#ff9a00";
+    ctx.fill();
+}
+
+// Gambar ring
+function drawHoop() {
+    ctx.fillStyle = "#ff4444";
+    ctx.fillRect(180, 70, 120, 10);
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(200, 80, 80, 5); // area scoring
+}
+
+// HUD
+function drawScore() {
+    ctx.fillStyle = "white";
+    ctx.font = "20px Arial";
+    ctx.fillText("You: " + scorePlayer, 20, 40);
+}
+
+// Power bar
+function drawPower() {
+    ctx.fillStyle = "#444";
+    ctx.fillRect(20, 660, 200, 20);
+    ctx.fillStyle = "#ffd400";
+    ctx.fillRect(20, 660, shotPower * 9, 20);
+}
+
+// LOOP utama
+function loop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    updatePlayer();
+    updateEnemy();
+    updateBall();
+    updatePower();
+
+    drawHoop();
+    drawCharacter(player, "#66aaff");
+    drawCharacter(enemy, "#ff6666");
+    drawBall();
+    drawScore();
+    drawPower();
+
+    requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+
+</body>
+</html>
